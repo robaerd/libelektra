@@ -112,7 +112,7 @@ RUN useradd \
     --gid ${JENKINS_GROUPID} \
     --shell "/bin/bash" \
     jenkins
-USER ${JENKINS_USERID}
+#USER ${JENKINS_USERID}
 
 RUN git config --global user.email 'Jenkins <autobuilder@libelektra.org>' \
     && git config --global user.name 'Jenkins'

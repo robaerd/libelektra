@@ -88,7 +88,7 @@ stage("CopyArtifacts") {
 def dockerInit() {
   node("master") {
     echo "Processing DOCKER_IMAGES"
-    // checkout scm
+    checkout scm
 
     DOCKER_IMAGES.buster = createDockerImageDesc(
       "debian-buster", this.&idTesting,
@@ -297,10 +297,11 @@ def buildImageStage(image) {
         echo "Starting ${env.STAGE_NAME} on ${env.NODE_NAME}"
         docker.withRegistry("https://${REGISTRY}",
                           'docker-hub-elektra-jenkins') {
-          // checkout scm
+          checkout scm
           def uid = getUid()
           def gid = getGid()
           def cpus = cpuCount()
+          sh "ls -la"
           def i = docker.build(
             image.id,"""\
 --pull \

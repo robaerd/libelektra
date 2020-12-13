@@ -34,19 +34,19 @@ RELEASE_VERSION = '' // release version, set during release build and used
 
 
 // Stages
-// stage("Init docker images") {
-//   dockerInit()
-// }
+stage("Init docker images") {
+  dockerInit()
+}
 
-// stage("Pull docker images") {
-//   parallel generateDockerPullStages()
-// }
+stage("Pull docker images") {
+  parallel generateDockerPullStages()
+}
 
-// maybeStage("Build docker images", DOCKER_IMAGES.any {img -> !img.value.exists}) {
-//   lock('docker-images') {
-//         parallel generateDockerBuildStages()
-//     }
-// }
+maybeStage("Build docker images", DOCKER_IMAGES.any {img -> !img.value.exists}) {
+  lock('docker-images') {
+        parallel generateDockerBuildStages()
+    }
+}
 
 // stage("Release") {
 //     milestone label: "Release"
@@ -60,7 +60,7 @@ RELEASE_VERSION = '' // release version, set during release build and used
 
 // Test stages
 stage("CreateArtifacts") {
-	node {
+	withDockerEnv(DOCKER_IMAGES.buster, [DOCKER_OPTS.MOUNT_MIRROR]) {
 		sh 'echo testtest > test.txt'
 		archive(["test.txt"])
 	}
@@ -88,7 +88,7 @@ stage("CopyArtifacts") {
 def dockerInit() {
   node("master") {
     echo "Processing DOCKER_IMAGES"
-    checkout scm
+    // checkout scm
 
     DOCKER_IMAGES.buster = createDockerImageDesc(
       "debian-buster", this.&idTesting,
@@ -96,20 +96,20 @@ def dockerInit() {
       "./scripts/docker/debian/buster/Dockerfile"
     ) 
 
-    DOCKER_IMAGES.focal = createDockerImageDesc( 
-      "ubuntu-focal", this.&idTesting,
-      "./scripts/docker/ubuntu/focal",
-      "./scripts/docker/ubuntu/focal/Dockerfile"
-    )
+    // DOCKER_IMAGES.focal = createDockerImageDesc( 
+    //   "ubuntu-focal", this.&idTesting,
+    //   "./scripts/docker/ubuntu/focal",
+    //   "./scripts/docker/ubuntu/focal/Dockerfile"
+    // )
 
     /* Build Elektra's documentation with this image.
      * Also contains latex for pdf creation.
      */
-    DOCKER_IMAGES.buster_doc = createDockerImageDesc(
-      "debian-buster-doc", this.&idTesting,
-      "./scripts/docker/debian/buster",
-      "./scripts/docker/debian/buster/doc.Dockerfile"
-    )
+    // DOCKER_IMAGES.buster_doc = createDockerImageDesc(
+    //   "debian-buster-doc", this.&idTesting,
+    //   "./scripts/docker/debian/buster",
+    //   "./scripts/docker/debian/buster/doc.Dockerfile"
+    // )
 
   }
 }
@@ -297,7 +297,7 @@ def buildImageStage(image) {
         echo "Starting ${env.STAGE_NAME} on ${env.NODE_NAME}"
         docker.withRegistry("https://${REGISTRY}",
                           'docker-hub-elektra-jenkins') {
-          checkout scm
+          // checkout scm
           def uid = getUid()
           def gid = getGid()
           def cpus = cpuCount()

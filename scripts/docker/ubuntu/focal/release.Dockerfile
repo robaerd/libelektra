@@ -136,47 +136,14 @@ RUN useradd \
 	jenkins
 
 
-# ENV ELEKTRA_ROOT=/opt/elektra
-# RUN mkdir -p ${ELEKTRA_ROOT}
-# COPY ./focal/*.deb /tmp/
-# RUN mv /tmp/*$(dpkg-architecture -qDEB_BUILD_ARCH).deb ${ELEKTRA_ROOT}/ \
-# 	&& rm -rf /tmp/*
+ENV ELEKTRA_ROOT=/opt/elektra/
+RUN mkdir -p ${ELEKTRA_ROOT}
+COPY ./packages/* ${ELEKTRA_ROOT}
 
-# RUN dpkg --force-all -i ${ELEKTRA_ROOT}/*$(dpkg-architecture -qDEB_BUILD_ARCH).deb
+RUN dpkg -i ${ELEKTRA_ROOT}/*
 
 
-
-# Install elektra
-#ARG PARALLEL=8
-
-# RUN mkdir -p ${ELEKTRA_ROOT} \
-#     && cd ${ELEKTRA_ROOT} \
-# 	&& git clone https://github.com/ElektraInitiative/libelektra.git . \
-#     && mkdir build \
-# 	&& cd build \
-#     && cmake -DBUILD_SHARED=ON \
-#              -DBUILD_FULL=ON \
-#              -DBUILD_STATIC=ON \
-#              -DCMAKE_BUILD_TYPE="Release" \
-#              -DKDB_DB_SYSTEM='/home/jenkins/.config/kdb/system' \
-#              -DKDB_DB_SPEC='/home/jenkins/.config/kdb/spec' \
-#              -DKDB_DB_HOME='/home/jenkins/.config/kdb/home' \
-#              .. \
-#     && make -j ${PARALLEL} \
-# #    && ctest -T Test --output-on-failure -j ${PARALLEL} \
-# #    && ./bin/kdb cache clear \
-# #   && rm -Rf '/home/jenkins/.config' '/home/jenkins/.cache' \
-# #    && cmake -DBUILD_TESTING=OFF -UKDB_DB_SYSTEM -UKDB_DB_SPEC -UKDB_DB_HOME . \
-# #    && make -j ${PARALLEL} \
-# 	&& make install \
-# 	&& rm -Rf ${GTEST_ROOT} \
-# 	&& rm -Rf ${ELEKTRA_ROOT}
-
-# TODO: remove after testing
-#RUN apt-get update && apt-get -y install vim
-
-
-# USER ${JENKINS_USERID}
+USER ${JENKINS_USERID}
 
 # only for testing remove afterwards! FIXME
 CMD tail -f /dev/null

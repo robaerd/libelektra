@@ -1,42 +1,6 @@
 FROM ubuntu:focal
 
 ARG DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y \
-	wget \
-	dh-lua \
-        dh-python \
-	dpkg-dev \
-	    libaugeas-dev \
-        libboost-dev \
-        libcurl4-gnutls-dev \
-        libdbus-1-dev \
-        libgit2-dev \
-        libgpgme-dev \
-        libqt5svg5-dev \
-        liblua5.2-dev \
-        libmarkdown2-dev \
-        libssl-dev \
-        libsystemd-dev \
-        libxerces-c-dev \
-        libxml2-dev \
-        libyajl-dev \
-        libyaml-cpp-dev \
-        libzmq3-dev \
-        # qtbase5-dev \
-	# qtdeclarative5-dev \
-	python-cheetah \
-        python-all \
-        python-dev \
-        python3-all \
-	python3-dev \
-	qml-module-qtquick-controls \
-	qml-module-qtquick2 \
-	qml-module-qtquick-window2 \
-	qml-module-qtquick-dialogs \
-	qml-module-qt-labs-folderlistmodel \
-	qml-module-qt-labs-settings \
-	&& rm -rf /var/lib/apt/lists/*
-
 RUN apt-get update && apt-get -y install \
         automake \
         autotools-dev \
@@ -84,13 +48,18 @@ RUN apt-get update && apt-get -y install \
         python3-dev \
         ninja-build \
         qtbase5-dev \
+        qml-module-qtquick2 \
+        qml-module-qtquick-window2 \
+        qml-module-qtquick-dialogs \ 
+        qml-module-qt-labs-folderlistmodel \
+        qml-module-qt-labs-settings \
         qtdeclarative5-dev \
         ruby-dev \
         rustc \
         valgrind \
         libpcre3 \
         libpcre3-dev \
-	&& rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*
 
 RUN wget https://downloads.sourceforge.net/swig/swig-4.0.2.tar.gz && \
     tar -xvzf swig-4.0.2.tar.gz && \
@@ -142,6 +111,11 @@ COPY ./packages/* ${ELEKTRA_ROOT}
 
 RUN dpkg -i ${ELEKTRA_ROOT}/*
 
+RUN kdb mount-info \
+    && mkdir -p `kdb sget system:/info/elektra/constants/cmake/KDB_DB_SPEC .` || true \
+    && chown -R ${JENKINS_USERID} `kdb sget system:/info/elektra/constants/cmake/KDB_DB_SPEC .` \
+    && chown -R ${JENKINS_USERID} `kdb sget system:/info/elektra/constants/cmake/KDB_DB_SYSTEM .` \
+    && chown -R ${JENKINS_USERID} `kdb sget system:/info/elektra/constants/cmake/BUILTIN_DATA_FOLDER .`
 
 USER ${JENKINS_USERID}
 

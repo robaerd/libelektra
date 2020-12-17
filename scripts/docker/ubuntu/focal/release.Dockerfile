@@ -82,7 +82,7 @@ RUN mkdir -p ${GTEST_ROOT} \
     && rm gtest.tar.gz
 
 # Update cache for shared libraries
-RUN ldconfig # TODO: mabye move after
+RUN ldconfig 
 
 RUN ln -s /usr/bin/swig /usr/bin/swig3.0
 

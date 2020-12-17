@@ -2,6 +2,8 @@
 
 BASE_DIR="$(pwd)"
 SRC_DIR="$BASE_DIR/libelektra"
+SCRIPTS_DIR="$SRC_DIR/scripts"
+PACKAGING_DIR="$SCRIPTS_DIR/packaging"
 BUILD_DIR="$SRC_DIR/build"
 FTP_DIR="$BASE_DIR/ftp"
 
@@ -50,15 +52,11 @@ run_updates() {
 update_debian_version_number() {
 	echo "Updating debian version..."
 
-	cd $SRC_DIR
-	git checkout -B temp
-	git tag -f $VERSION
-	git checkout -B debian origin/debian
-	git merge --no-ff -m 'merge $VERSION' temp
-
+	cd $PACKAGING_DIR
 	dch --newversion $DVERSION "New upstream version."
+	dch --release $DVERSION "New upstream version"
 	git add debian/changelog
-	git commit -m "Debian Package $DVERSION (UNRELEASED)"
+	git commit -m "Update debian/changelog for release $DVERSION"
 }
 
 run_checks() {
@@ -85,11 +83,7 @@ run_checks() {
 	make run_all
 	make run_memcheck
 
-	# log tests
-	run_log_tests "test-src"
-
-	# trace kdb calls
-	log_strace "strace-src"
+	$SCRIPTS_DIR/release/release-test.sh
 
 	# Check which files changed
 	cd "$BUILD_DIR"
@@ -152,16 +146,12 @@ configure_debian_package() {
 	# Build deb:
 	cd $SRC_DIR
 
-	# UNRELEASED -> unstable
-	dch --release $DVERSION "New upstream version"
-	git add debian/changelog
-	git commit -m "Debian Package $DVERSION"
-
 	cp $FTP_DIR/releases/elektra-$VERSION.tar.gz $BASE_DIR/elektra_$VERSION.orig.tar.gz
 
 	git clean -fdx
 	rm -rf $BUILD_DIR
-	gbp buildpackage -sa
+
+	$SCRIPTS_DIR/packaging/package.sh #TODO: sign package
 
 	# get debian version codename
 	VERSION_CODENAME=$(grep "VERSION_CODENAME=" /etc/os-release | awk -F= {' print $2'} | sed s/\"//g)
@@ -170,43 +160,8 @@ configure_debian_package() {
 	cd $BASE_DIR
 	mkdir -p $BASE_DIR/$VERSION/debian/$VERSION_CODENAME
 	mv elektra_$DVERSION* *$DVERSION*.deb elektra_$VERSION.orig.tar.gz $BASE_DIR/$VERSION/debian/$VERSION_CODENAME/
-	# sudo dpkg -i $BASE_DIR/$VERSION/debian/$DVERSION/*$(dpkg-architecture -qDEB_BUILD_ARCH).deb
-
-	# kdb --version | tee ~elektra/$VERSION/debian/version
-
-	# trace kdb calls
-	# log_strace "strace-debian-package"
-
-	# run and log tests
-	# run_log_tests "test-debian-package"
-
 }
 
-log_strace() {
-	CONTEXT=$1
-	mkdir $BASE_DIR/$VERSION/$CONTEXT
-
-	strace -o $BASE_DIR/$VERSION/$CONTEXT/mount.strace kdb mount file.ecf user:/release_test
-	strace -o $BASE_DIR/$VERSION/$CONTEXT/file.strace kdb file user:/release_test/b
-	strace -o $BASE_DIR/$VERSION/$CONTEXT/set.strace kdb set user:/release_test/b
-	strace -o $BASE_DIR/$VERSION/$CONTEXT/get.strace kdb get user:/release_test/b
-	strace -o $BASE_DIR/$VERSION/$CONTEXT/rm.strace kdb rm user:/release_test/b
-	strace -o $BASE_DIR/$VERSION/$CONTEXT/umount.strace kdb umount user:/release_test
-}
-
-run_log_tests() {
-	CONTEXT=$1
-	mkdir $BASE_DIR/$VERSION/$CONTEXT
-
-	KDB=kdb kdb run_all -v 2>&1 | tee $BASE_DIR/$VERSION/$CONTEXT/run_all
-	check_test_amount $BASE_DIR/$VERSION/$CONTEXT/run_all
-
-	KDB=kdb-full kdb-full run_all > $BASE_DIR/$VERSION/$CONTEXT/run_all_full 2>&1
-	check_test_amount $BASE_DIR/$VERSION/$CONTEXT/run_all_full
-
-	KDB=kdb-static kdb-static run_all > $BASE_DIR/$VERSION/$CONTEXT/run_all_static 2>&1
-	check_test_amount $BASE_DIR/$VERSION/$CONTEXT/run_all_static
-}
 
 check_test_amount() {
 	TEST_LOG_PATH=$1

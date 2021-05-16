@@ -1,0 +1,78 @@
+#!/usr/bin/env groovy
+
+// Buildjob properties
+properties([
+  buildDiscarder(
+    logRotator(
+      artifactDaysToKeepStr: '31',
+      artifactNumToKeepStr: '10'
+    )
+  )
+])
+
+
+stage('Testing') {
+  milestone label: 'Testing'
+  parallel generateTestStages()
+}
+
+
+/**
+ *  Generate test stages
+ */
+def generateTestStages() {
+  def tasks = [:]
+
+  tasks << testMacos('macOS-11')
+
+  return tasks
+}
+
+/**
+ * Test stage
+ *
+ *Executes the test script
+ *
+ * @param stageName used to identify the release and name the stage
+ * @param image which docker image should be used
+ */
+def testMacos(stageName) {
+  return [(stageName): {
+    stage(stageName) {
+      node('macos') {
+        checkout scm
+        dir ('scripts/vagrant/macos') {
+          sh "vagrant up"
+          sh """
+vagrant ssh -c '\
+  cd \$HOME/elektra/build; \
+  SYSTEM_DIR="$PWD/kdbsystem"; \
+  CMAKE_OPT+=(\
+    -GNinja\
+    -DPLUGINS="${PLUGINS:-ALL}" \
+    -DBINDINGS="${BINDINGS:-ALL}" \
+    -DTOOLS="${TOOLS:-ALL}" \
+    -DBUILD_FULL="${BUILD_FULL:-OFF}" \
+    -DBUILD_SHARED="${BUILD_SHARED:-ON}" \
+    -DENABLE_ASAN="${ENABLE_ASAN:-OFF}" \
+    -DCOMMON_FLAGS="${COMMON_FLAGS--Werror}" \
+    -DENABLE_DEBUG=ON \
+    -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+    -DKDB_DEFAULT_STORAGE="${KDB_DEFAULT_STORAGE:-dump}" \
+  ); \
+  printf "—— CMake Config ——\n";\
+  for option in "\${CMAKE_OPT[@]}"; do printf "%s\n" "\$option"; done;\
+  cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo \${CMAKE_OPT[@]}; \
+  sudo cmake --build . && \
+  sudo cmake --build . --target install && \
+  sudo cmake --build . --target run_all && \
+  sudo ldconfig && \
+  sudo kdb run_all;\
+'"""
+          sh "vagrant destroy"
+        }
+        deleteDir()
+      }
+    }
+  }]
+}
